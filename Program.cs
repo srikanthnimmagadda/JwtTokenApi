@@ -1,6 +1,15 @@
+using JwtTokenApi.Data;
+using JwtTokenApi.Domain;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
+builder.Services.AddDbContext<SchoolDbContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+builder.Services.AddIdentity<User, Role>().AddDefaultTokenProviders().AddEntityFrameworkStores<SchoolDbContext>();
+
 builder.Services.AddControllersWithViews();
 
 var app = builder.Build();
