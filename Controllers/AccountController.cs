@@ -122,9 +122,24 @@ namespace JwtTokenApi.Controllers
                 signingCredentials: new SigningCredentials(authSigninKey, SecurityAlgorithms.HmacSha256));
 
             string? jwtToken = new JwtSecurityTokenHandler().WriteToken(token);
+
+            var refreshToken = new RefreshToken
+            {
+                JwtId = token.Id,
+                IsRevoked = false,
+                UserId = user.Id,
+                TokenAddedOn = DateTime.UtcNow,
+                TokenExpiredOn = DateTime.UtcNow.AddMonths(6),
+                Token = $"{Guid.NewGuid()}-{Guid.NewGuid()}"
+            };
+
+            await _dbContext.RefreshTokens.AddAsync(refreshToken);
+            await _dbContext.SaveChangesAsync();
+
             AuthResultViewModel? response = new AuthResultViewModel
             {
                 Token = jwtToken,
+                RefresToken = refreshToken.Token,
                 ExpiresAt = token.ValidTo
             };
 

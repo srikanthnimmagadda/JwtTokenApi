@@ -10,6 +10,11 @@
         /// <summary>
         /// 
         /// </summary>
+        public string RefresToken { get; set; }
+
+        /// <summary>
+        /// 
+        /// </summary>
         public DateTime ExpiresAt { get; set; }
     }
 }

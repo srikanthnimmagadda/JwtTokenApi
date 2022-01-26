@@ -16,6 +16,8 @@ namespace JwtTokenApi.Data
         {
         }
 
+        public DbSet<RefreshToken> RefreshTokens { get; set; }
+
         /// <summary>
         /// 
         /// </summary>
