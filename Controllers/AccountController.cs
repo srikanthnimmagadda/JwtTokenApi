@@ -3,6 +3,7 @@ using JwtTokenApi.Domain;
 using JwtTokenApi.ViewModels;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
@@ -21,6 +22,7 @@ namespace JwtTokenApi.Controllers
         private readonly RoleManager<Role> _roleManager;
         private readonly SchoolDbContext _dbContext;
         private readonly IConfiguration _configuration;
+        private readonly TokenValidationParameters _tokenValidationParameters;
 
         /// <summary>
         /// 
@@ -29,12 +31,17 @@ namespace JwtTokenApi.Controllers
         /// <param name="roleManager"></param>
         /// <param name="dbContext"></param>
         /// <param name="configuration"></param>
-        public AccountController(UserManager<User> userManager, RoleManager<Role> roleManager, SchoolDbContext dbContext, IConfiguration configuration)
+        public AccountController(UserManager<User> userManager,
+            RoleManager<Role> roleManager,
+            SchoolDbContext dbContext,
+            IConfiguration configuration,
+            TokenValidationParameters tokenValidationParameters)
         {
             _userManager = userManager;
             _roleManager = roleManager;
             _dbContext = dbContext;
             _configuration = configuration;
+            _tokenValidationParameters = tokenValidationParameters;
         }
 
         /// <summary>
@@ -90,7 +97,7 @@ namespace JwtTokenApi.Controllers
             User? userExists = await _userManager.FindByEmailAsync(model.Email);
             if (userExists != null && await _userManager.CheckPasswordAsync(userExists, model.Password))
             {
-                var jwtToken = await GenerateJwtTokenAsync(userExists);
+                var jwtToken = await GenerateJwtTokenAsync(userExists, null);
                 return Ok(jwtToken);
             }
             return Unauthorized();
@@ -99,9 +106,55 @@ namespace JwtTokenApi.Controllers
         /// <summary>
         /// 
         /// </summary>
-        /// <param name="user"></param>
+        /// <param name="model"></param>
         /// <returns></returns>
-        private async Task<AuthResultViewModel> GenerateJwtTokenAsync(User user)
+        [HttpPost("refresh-token")]
+        public async Task<IActionResult> RefreshToken([FromBody] TokenRequestViewModel model)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest("Please, provide the data for all the required fields!");
+            }
+            var result = await VerifyAndGenerateTokenAsync(model);
+            return Ok(result);
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        /// <exception cref="NotImplementedException"></exception>
+        private async Task<AuthResultViewModel> VerifyAndGenerateTokenAsync(TokenRequestViewModel model)
+        {
+            var jwtTokenHandler = new JwtSecurityTokenHandler();
+            var refreshToken = await _dbContext.RefreshTokens.FirstOrDefaultAsync(t => t.Token == model.RefreshToken);
+            var user = await _userManager.FindByIdAsync(refreshToken?.UserId.ToString());
+            try
+            {
+                var tokenCheckResult = jwtTokenHandler.ValidateToken(model.Token, _tokenValidationParameters, out var validateToken);
+                return await GenerateJwtTokenAsync(user, refreshToken);
+            }
+            catch (SecurityTokenExpiredException)
+            {
+                if (refreshToken?.TokenExpireOn >= DateTime.UtcNow)
+                {
+                    return await GenerateJwtTokenAsync(user, refreshToken);
+                }
+                else
+                {
+                    return await GenerateJwtTokenAsync(user, null);
+                }
+            }
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="user"></param>
+        /// <param name="rToken"></param>
+        /// <returns></returns>
+        private async Task<AuthResultViewModel> GenerateJwtTokenAsync(User user, RefreshToken? rToken)
         {
             List<Claim>? authClaims = new List<Claim>()
             {
@@ -123,13 +176,25 @@ namespace JwtTokenApi.Controllers
 
             string? jwtToken = new JwtSecurityTokenHandler().WriteToken(token);
 
+            if (rToken != null)
+            {
+                AuthResultViewModel? rTokenResponse = new AuthResultViewModel
+                {
+                    Token = jwtToken,
+                    RefresToken = rToken.Token,
+                    ExpiresAt = token.ValidTo
+                };
+
+                return rTokenResponse;
+            }
+
             var refreshToken = new RefreshToken
             {
                 JwtId = token.Id,
                 IsRevoked = false,
                 UserId = user.Id,
                 TokenAddedOn = DateTime.UtcNow,
-                TokenExpiredOn = DateTime.UtcNow.AddMonths(6),
+                TokenExpireOn = DateTime.UtcNow.AddMonths(6),
                 Token = $"{Guid.NewGuid()}-{Guid.NewGuid()}"
             };
 

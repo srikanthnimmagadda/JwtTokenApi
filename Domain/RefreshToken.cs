@@ -34,7 +34,7 @@ namespace JwtTokenApi.Domain
         /// <summary>
         /// 
         /// </summary>
-        public DateTime TokenExpiredOn { get; set; }
+        public DateTime TokenExpireOn { get; set; }
 
         /// <summary>
         /// 
