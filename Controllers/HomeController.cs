@@ -1,9 +1,11 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 
 namespace JwtTokenApi.Controllers
 {
     [ApiController]
     [Route("[controller]")]
+    [Authorize]
     public class HomeController : ControllerBase
     {
         /// <summary>
