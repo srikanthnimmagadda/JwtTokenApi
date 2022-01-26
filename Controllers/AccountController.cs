@@ -76,9 +76,22 @@ namespace JwtTokenApi.Controllers
 
             IdentityResult? result = await _userManager.CreateAsync(user, model.Password);
 
-            return result.Succeeded
-                ? Ok("New User has been created successfully!")
-                : BadRequest("The System failed to add a new user, please try again and contact the System Administrator if problem persists");
+            if (result.Succeeded)
+            {
+                switch (model.Role)
+                {
+                    case Helpers.UserRole.Manager:
+                        await _userManager.AddToRoleAsync(user, Helpers.UserRole.Manager);
+                        break;
+                    case Helpers.UserRole.Student:
+                        await _userManager.AddToRoleAsync(user, Helpers.UserRole.Student);
+                        break;
+                    default:
+                        break;
+                }
+                return Ok("New User has been created successfully!");
+            }
+            return BadRequest("The System failed to add a new user, please try again and contact the System Administrator if problem persists");
         }
 
         /// <summary>
@@ -162,8 +175,15 @@ namespace JwtTokenApi.Controllers
                 new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
                 new Claim(JwtRegisteredClaimNames.Email, user.Email),
                 new Claim(JwtRegisteredClaimNames.Sub, user.Email),
-                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
             };
+
+            //Add User Role Claims
+            var userRoles = await _userManager.GetRolesAsync(user);
+            foreach (var role in userRoles)
+            {
+                authClaims.Add(new Claim(ClaimTypes.Role, role));
+            }
 
             SymmetricSecurityKey? authSigninKey = new SymmetricSecurityKey(Encoding.ASCII.GetBytes(_configuration["JWT:Secret"]));
 

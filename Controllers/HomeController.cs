@@ -5,7 +5,7 @@ namespace JwtTokenApi.Controllers
 {
     [ApiController]
     [Route("[controller]")]
-    [Authorize]
+    [Authorize(Roles = $"{Helpers.UserRole.Manager},{Helpers.UserRole.Student}")]
     public class HomeController : ControllerBase
     {
         /// <summary>

@@ -43,5 +43,10 @@ namespace JwtTokenApi.ViewModels
         /// 
         /// </summary>
         public DateTime? DateOfBirth { get; set; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public string Role { get; set; }
     }
 }
