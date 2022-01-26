@@ -3,6 +3,10 @@ using JwtTokenApi.Domain;
 using JwtTokenApi.ViewModels;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.IdentityModel.Tokens;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Text;
 
 namespace JwtTokenApi.Controllers
 {
@@ -86,9 +90,45 @@ namespace JwtTokenApi.Controllers
             User? userExists = await _userManager.FindByEmailAsync(model.Email);
             if (userExists != null && await _userManager.CheckPasswordAsync(userExists, model.Password))
             {
-                return Ok($"User {model.Email} Signed In!");
+                var jwtToken = await GenerateJwtTokenAsync(userExists);
+                return Ok(jwtToken);
             }
             return Unauthorized();
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="user"></param>
+        /// <returns></returns>
+        private async Task<AuthResultViewModel> GenerateJwtTokenAsync(User user)
+        {
+            List<Claim>? authClaims = new List<Claim>()
+            {
+                new Claim(ClaimTypes.Name, user.UserName),
+                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+                new Claim(JwtRegisteredClaimNames.Email, user.Email),
+                new Claim(JwtRegisteredClaimNames.Sub, user.Email),
+                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+            };
+
+            SymmetricSecurityKey? authSigninKey = new SymmetricSecurityKey(Encoding.ASCII.GetBytes(_configuration["JWT:Secret"]));
+
+            JwtSecurityToken? token = new JwtSecurityToken(
+                issuer: _configuration["JWT:Issuer"],
+                audience: _configuration["JWT:Audience"],
+                expires: DateTime.UtcNow.AddMinutes(1),
+                claims: authClaims,
+                signingCredentials: new SigningCredentials(authSigninKey, SecurityAlgorithms.HmacSha256));
+
+            string? jwtToken = new JwtSecurityTokenHandler().WriteToken(token);
+            AuthResultViewModel? response = new AuthResultViewModel
+            {
+                Token = jwtToken,
+                ExpiresAt = token.ValidTo
+            };
+
+            return response;
         }
     }
 }
