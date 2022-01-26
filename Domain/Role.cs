@@ -17,12 +17,12 @@ namespace JwtTokenApi.Domain
         /// <summary>
         /// 
         /// </summary>
-        public string UpdatedBy { get; set; }
+        public string? UpdatedBy { get; set; }
 
         /// <summary>
         /// 
         /// </summary>
-        public string UpdatedByName { get; set; }
+        public string? UpdatedByName { get; set; }
 
         /// <summary>
         /// 

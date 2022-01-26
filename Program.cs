@@ -58,4 +58,5 @@ app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+DbInitializer.SeedRolesToDataase(app).Wait();
 app.Run();

@@ -16,7 +16,7 @@ namespace JwtTokenApi.Data.Mappings
             builder.Property(e => e.Id).UseIdentityColumn();
             builder.Property(e => e.Name).HasMaxLength(100).IsRequired();
             builder.Property(e => e.Description).IsRequired().HasMaxLength(250);
-            builder.Property(e => e.CreatedDate).IsRequired().HasDefaultValueSql("GetDate()");
+            builder.Property(e => e.CreatedDate).IsRequired().HasDefaultValueSql("GETUTCDATE()");
             builder.Property(e => e.UpdatedBy).HasMaxLength(100);
             builder.Property(e => e.UpdatedByName).HasMaxLength(150);
             builder.Property(e => e.IsDeleted).IsRequired().HasDefaultValue(0);
